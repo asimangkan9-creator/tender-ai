@@ -19,7 +19,10 @@ def json_encoder(obj):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()
+    try:
+        await init_db()
+    except Exception:
+        pass
     yield
     await close_db()
 
