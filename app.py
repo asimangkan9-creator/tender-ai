@@ -1,14 +1,21 @@
+import json
+from bson import ObjectId
+from datetime import datetime
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from database import init_db, close_db
 from models import TenderCreate, SearchRequest
-from crud import (
-    create_tender, get_tender, get_all_tenders,
-    search_tenders, update_tender, delete_tender
-)
+from crud import create_tender, get_tender, get_all_tenders, search_tenders, update_tender, delete_tender
 from ai_service import get_ai_recommendation, chat_with_ai
 
+def json_encoder(obj):
+    if isinstance(obj, ObjectId):
+        return str(obj)
+    if isinstance(obj, datetime):
+        return obj.isoformat()
+    raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -16,13 +23,7 @@ async def lifespan(app: FastAPI):
     yield
     await close_db()
 
-
-app = FastAPI(
-    title="Tender Search AI",
-    description="AI-powered tender search and recommendation system",
-    version="1.0.0",
-    lifespan=lifespan
-)
+app = FastAPI(title="Tender Search AI", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,40 +33,33 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 @app.get("/")
 async def root():
     return {"message": "Tender Search AI API"}
 
-
 @app.post("/tenders")
 async def add_tender(tender: TenderCreate):
-    existing = await get_tender_by_reference(tender.reference_link)
-    if existing:
-        raise HTTPException(status_code=400, detail="Tender already exists")
-    return await create_tender(tender)
-
+    result = await create_tender(tender)
+    return json.loads(json.dumps(result.model_dump(), default=json_encoder))
 
 @app.get("/tenders")
 async def list_tenders(limit: int = 100):
-    return await get_all_tenders(limit)
-
+    tenders = await get_all_tenders(limit)
+    return [json.loads(json.dumps(t.model_dump(), default=json_encoder)) for t in tenders]
 
 @app.get("/tenders/{tender_id}")
 async def get_tender_by_id(tender_id: str):
     tender = await get_tender(tender_id)
     if not tender:
         raise HTTPException(status_code=404, detail="Tender not found")
-    return tender
-
+    return json.loads(json.dumps(tender.model_dump(), default=json_encoder))
 
 @app.put("/tenders/{tender_id}")
 async def update_tender_by_id(tender_id: str, tender: TenderCreate):
     updated = await update_tender(tender_id, tender)
     if not updated:
         raise HTTPException(status_code=404, detail="Tender not found")
-    return updated
-
+    return json.loads(json.dumps(updated.model_dump(), default=json_encoder))
 
 @app.delete("/tenders/{tender_id}")
 async def delete_tender_by_id(tender_id: str):
@@ -74,27 +68,18 @@ async def delete_tender_by_id(tender_id: str):
         raise HTTPException(status_code=404, detail="Tender not found")
     return {"message": "Tender deleted"}
 
-
 @app.post("/search")
 async def search(request: SearchRequest):
-    tenders = await search_tenders(request.keyword, request.location)
-    if not tenders:
-        return {"ai_answer": "No tenders found matching your criteria.", "results": []}
-
-    ai_answer = await get_ai_recommendation(request.keyword, [t.model_dump() for t in tenders])
-    return {
-        "ai_answer": ai_answer,
-        "results": [t.model_dump() for t in tenders]
-    }
-
-
-@app.post("/chat")
-async def chat(message: str):
-    response = await chat_with_ai(message)
-    return {"response": response}
-
-
-async def get_tender_by_reference(reference_link: str):
-    from database import tenders_collection
-    tender = await tenders_collection.find_one({"reference_link": reference_link})
-    return tender
+    try:
+        tenders = await search_tenders(request.keyword, request.location)
+        if not tenders:
+            return {"ai_answer": "No tenders found.", "results": []}
+        ai_answer = await get_ai_recommendation(request.keyword, [t.model_dump() for t in tenders])
+        results = []
+        for t in tenders:
+            d = t.model_dump()
+            d["id"] = str(d.get("id", ""))
+            results.append(d)
+        return {"ai_answer": ai_answer, "results": results}
+    except Exception as e:
+        return {"ai_answer": f"Error: {str(e)}", "results": []}

@@ -4,16 +4,13 @@ from bs4 import BeautifulSoup
 from crud import create_tender
 from models import TenderCreate
 
-
 async def scrape_tenders(url: str):
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=False)
         page = await browser.new_page()
         await page.goto(url)
-
-        print("Please solve the CAPTCHA manually. Press Enter after solving...")
+        print("Solve CAPTCHA manually. Press Enter after solving...")
         await asyncio.get_event_loop().run_in_executor(None, input)
-
         content = await page.content()
         await browser.close()
 
@@ -36,7 +33,6 @@ async def scrape_tenders(url: str):
             )
             await create_tender(tender)
             print(f"Saved: {tender.title}")
-
 
 if __name__ == "__main__":
     asyncio.run(scrape_tenders("https://tender.assam.gov.in"))

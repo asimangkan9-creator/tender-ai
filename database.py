@@ -12,7 +12,6 @@ client = AsyncIOMotorClient(MONGO_URI)
 db = client[MONGO_DB]
 tenders_collection = db["tenders"]
 
-
 async def init_db():
     await tenders_collection.create_indexes([
         IndexModel([("title", ASCENDING)]),
@@ -20,7 +19,6 @@ async def init_db():
         IndexModel([("closing_date", ASCENDING)]),
         IndexModel([("reference_link", ASCENDING)], unique=True),
     ])
-
 
 async def close_db():
     client.close()
