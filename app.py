@@ -1,4 +1,5 @@
 import json
+import asyncio
 from bson import ObjectId
 from datetime import datetime
 from fastapi import FastAPI, HTTPException
@@ -9,6 +10,7 @@ from database import init_db, close_db
 from models import TenderCreate, SearchRequest
 from crud import create_tender, get_tender, get_all_tenders, search_tenders, update_tender, delete_tender
 from ai_service import get_ai_recommendation, chat_with_ai
+from gem_scraper import scrape_gem_tenders
 
 
 def json_encoder(obj):
@@ -102,3 +104,9 @@ async def search(request: SearchRequest):
 async def chat(message: str):
     response = await chat_with_ai(message)
     return {"response": response}
+
+
+@app.post("/scrape/gem")
+async def trigger_gem_scrape():
+    asyncio.create_task(scrape_gem_tenders())
+    return {"message": "GEM scrape started in background"}
