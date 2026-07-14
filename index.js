@@ -19,6 +19,18 @@ app.get('/', (req, res) => {
   res.json({ message: 'Tender Search AI API' });
 });
 
+app.get('/debug', (req, res) => {
+  const uri = process.env.MONGO_URI || 'NOT SET';
+  const maskedUri = uri.replace(/\/\/[^:]+:[^@]+@/, '//***:***@');
+  const mongooseState = mongoose.connection.readyState;
+  const states = ['disconnected', 'connected', 'connecting', 'disconnecting'];
+  res.json({
+    mongoUri: maskedUri,
+    mongoDb: process.env.MONGO_DB || 'NOT SET',
+    mongooseState: states[mongooseState] || 'unknown'
+  });
+});
+
 app.use('/tenders', tendersRouter);
 app.use('/search', searchRouter);
 app.use('/scrape', scraperRouter);
