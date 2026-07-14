@@ -1,9 +1,7 @@
-const express = require('express');
-const router = express.Router();
 const Tender = require('../models/Tender');
 const { get_ai_recommendation } = require('../services/ai');
 
-router.post('/', async (req, res) => {
+const searchTenders = async (req, res) => {
   try {
     const { keyword, location, source } = req.body;
 
@@ -29,6 +27,6 @@ router.post('/', async (req, res) => {
   } catch (err) {
     res.json({ ai_answer: `Error: ${err.message}`, results: [] });
   }
-});
+};
 
-module.exports = router;
+module.exports = { searchTenders };

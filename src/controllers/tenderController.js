@@ -1,17 +1,15 @@
-const express = require('express');
-const router = express.Router();
 const Tender = require('../models/Tender');
 
-router.post('/', async (req, res) => {
+const createTender = async (req, res) => {
   try {
     const tender = await Tender.create(req.body);
     res.status(201).json(tender);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
-});
+};
 
-router.get('/', async (req, res) => {
+const getTenders = async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 100;
     const tenders = await Tender.find().limit(limit);
@@ -19,9 +17,9 @@ router.get('/', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
+};
 
-router.get('/:id', async (req, res) => {
+const getTenderById = async (req, res) => {
   try {
     const tender = await Tender.findById(req.params.id);
     if (!tender) return res.status(404).json({ error: 'Tender not found' });
@@ -29,9 +27,9 @@ router.get('/:id', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
+};
 
-router.put('/:id', async (req, res) => {
+const updateTender = async (req, res) => {
   try {
     const tender = await Tender.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!tender) return res.status(404).json({ error: 'Tender not found' });
@@ -39,9 +37,9 @@ router.put('/:id', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
+};
 
-router.delete('/:id', async (req, res) => {
+const deleteTender = async (req, res) => {
   try {
     const tender = await Tender.findByIdAndDelete(req.params.id);
     if (!tender) return res.status(404).json({ error: 'Tender not found' });
@@ -49,6 +47,6 @@ router.delete('/:id', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
+};
 
-module.exports = router;
+module.exports = { createTender, getTenders, getTenderById, updateTender, deleteTender };
