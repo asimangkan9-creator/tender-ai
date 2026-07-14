@@ -5,11 +5,15 @@ const MONGO_DB = process.env.MONGO_DB || 'tender_ai';
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(MONGO_URI, { dbName: MONGO_DB });
+    await mongoose.connect(MONGO_URI, {
+      dbName: MONGO_DB,
+      serverSelectionTimeoutMS: 5000
+    });
     console.log('MongoDB connected');
   } catch (err) {
     console.error('MongoDB connection error:', err.message);
-    process.exit(1);
+    console.log('Retrying in 10 seconds...');
+    setTimeout(connectDB, 10000);
   }
 };
 
