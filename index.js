@@ -32,6 +32,20 @@ app.get('/debug', (req, res) => {
   });
 });
 
+app.get('/reconnect', async (req, res) => {
+  try {
+    const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017';
+    const MONGO_DB = process.env.MONGO_DB || 'tender_ai';
+    await mongoose.disconnect();
+    const opts = { dbName: MONGO_DB, serverSelectionTimeoutMS: 10000, connectTimeoutMS: 10000 };
+    if (!MONGO_URI.includes('tls=')) { opts.tls = true; opts.tlsAllowInvalidCertificates = true; }
+    await mongoose.connect(MONGO_URI, opts);
+    res.json({ status: 'connected' });
+  } catch (err) {
+    res.json({ status: 'failed', error: err.message, code: err.code || null });
+  }
+});
+
 app.use('/tenders', tendersRouter);
 app.use('/search', searchRouter);
 app.use('/scrape', scraperRouter);
