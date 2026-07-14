@@ -1,15 +1,9 @@
+# Node.js
+node_modules/
+
 # MongoDB
 *.log
 data/
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-venv/
-env/
 
 # Environment
 .env
