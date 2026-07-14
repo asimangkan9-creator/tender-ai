@@ -63,3 +63,7 @@ async def update_tender(tender_id: str, tender: TenderCreate) -> Optional[Tender
 async def delete_tender(tender_id: str) -> bool:
     result = await tenders_collection.delete_one({"_id": ObjectId(tender_id)})
     return result.deleted_count > 0
+
+
+async def get_tender_by_reference_link(reference_link: str):
+    return await tenders_collection.find_one({"reference_link": reference_link})

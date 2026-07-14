@@ -1,6 +1,6 @@
 import asyncio
 from playwright.async_api import async_playwright
-from crud import create_tender
+from crud import create_tender, get_tender_by_reference_link
 from models import TenderCreate
 
 
@@ -69,6 +69,10 @@ async def scrape_gem_tenders(max_pages: int = 5):
                         bid_number = extract_str(doc.get("b_bid_number", ""), "")
 
                         link = f"https://bidplus.gem.gov.in/showbidDocument/{bid_id}"
+
+                        existing = await get_tender_by_reference_link(link)
+                        if existing:
+                            continue
 
                         tender = TenderCreate(
                             title=title,
