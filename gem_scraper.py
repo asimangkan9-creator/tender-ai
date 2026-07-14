@@ -1,20 +1,21 @@
-import asyncio
-from playwright.async_api import async_playwright
+import httpx
+import re
 from crud import create_tender, get_tender_by_reference_link
 from models import TenderCreate
 
 
 async def scrape_gem_tenders(max_pages: int = 5):
     """Scrape GEM tenders from bidplus.gem.gov.in via AJAX API."""
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
-
+    async with httpx.AsyncClient() as client:
         print("Loading GEM bids page...")
-        await page.goto("https://bidplus.gem.gov.in/all-bids", wait_until="networkidle")
-        await page.wait_for_selector("#chash", state="attached", timeout=30000)
+        resp = await client.get("https://bidplus.gem.gov.in/all-bids")
 
-        csrf_token = await page.evaluate("document.getElementById('chash').value")
+        match = re.search(r'id="chash"\s+type="hidden"\s+value="([^"]+)"', resp.text)
+        if not match:
+            print("Could not find CSRF token")
+            return 0
+
+        csrf_token = match.group(1)
         print(f"CSRF token: {csrf_token[:20]}...")
 
         count = 0
@@ -34,18 +35,13 @@ async def scrape_gem_tenders(max_pages: int = 5):
             }
 
             try:
-                csrf = csrf_token
-                response = await page.evaluate("""
-                    async ([payload, csrf]) => {
-                        const formData = new FormData();
-                        formData.append('payload', JSON.stringify(payload));
-                        formData.append('csrf_bd_gem_nk', csrf);
-                        const res = await fetch('/all-bids-data', {method: 'POST', body: formData});
-                        return await res.json();
-                    }
-                """, [payload, csrf])
+                resp = await client.post(
+                    "https://bidplus.gem.gov.in/all-bids-data",
+                    data={"payload": str(payload), "csrf_bd_gem_nk": csrf_token}
+                )
+                data = resp.json()
+                docs = data.get("response", {}).get("response", {}).get("docs", [])
 
-                docs = response.get("response", {}).get("response", {}).get("docs", [])
                 if not docs:
                     print(f"No more tenders on page {page_num}. Stopping.")
                     break
@@ -98,12 +94,10 @@ async def scrape_gem_tenders(max_pages: int = 5):
                 print(f"Error fetching page {page_num}: {e}")
                 break
 
-            await asyncio.sleep(1)
-
-        await browser.close()
         print(f"\nTotal GEM tenders saved: {count}")
         return count
 
 
 if __name__ == "__main__":
+    import asyncio
     asyncio.run(scrape_gem_tenders())
